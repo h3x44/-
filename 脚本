@@ -1,0 +1,75 @@
+import time
+
+import requests
+
+# -----------
+# 配置区开始
+
+OFFSEC_COOKIE = "" # 从 portal.offsec.com 拿到的 COOKIE 字符串
+LEARNING_UNIT_ID = 17403 # learning_unit_id, 从 https://portal.offsec.com/api/subscriptions/ 拿到，这个例子就是 OSMR 的
+SERVER_CHAN_URL = "https://sctapi.ftqq.com/xxxxx.send" # SERVER 酱 的推送地址, 到这里申请 https://sct.ftqq.com/，配置好通道
+EXAM_NAME = "OSMR" # 考试的名字，这个可以自定义
+# 在自己服务器上配置完，直接开个 screen 挂着就行，screen -S montior
+
+# 配置区结束
+
+# -----------
+
+while True:
+    for i in range(3):
+        try:
+            url = "https://portal.offsec.com/api/me"
+
+            headers = {"Cookie": OFFSEC_COOKIE}
+
+            r = requests.post(url, headers=headers)
+            token = r.json()['jwt']
+
+            url = "https://portal.offensive-security.com/api/subscriptions/"
+
+            headers = {
+              'Authorization': 'Bearer ' + token
+            }
+
+            response = requests.request("GET", url, headers=headers)
+            
+            if 'active_subscriptions' in response.json():
+                for i in response.json()['active_subscriptions']:
+                    if 'current_exam_attempt' in i and i['current_exam_attempt']:
+                        if i['current_exam_attempt']['status']:
+                            if i['learning_unit_id'] == LEARNING_UNIT_ID:
+                                if i['current_exam_attempt']['status'] == 'GRADING_PENDING':
+                                    import requests
+
+                                    url = SERVER_CHAN_URL
+
+                                    response = requests.get(url, params={"title": EXAM_NAME + "考试当前状态：等待评分中！ RAW: " + i['current_exam_attempt']['status'], "desp": EXAM_NAME + "考试当前状态：等待评分中！ RAW: " + i['current_exam_attempt']['status']})
+
+                                    print(response.text)
+                                else:
+                                    if i['current_exam_attempt']['status'] == 'PASSED':
+                                        import requests
+
+                                        url = SERVER_CHAN_URL
+
+                                        response = requests.get(url, params={"title": EXAM_NAME + "考试当前状态：通过！ RAW: " + i['current_exam_attempt']['status'], "desp": EXAM_NAME + "考试当前状态：通过！ RAW: " + i['current_exam_attempt']['status']})
+
+                                        print(response.text)
+                                    else:
+                                        import requests
+
+                                        url = SERVER_CHAN_URL
+
+                                        response = requests.get(url, params={"title": EXAM_NAME + "考试当前状态：" + i['current_exam_attempt']['status'], "desp": EXAM_NAME + "考试当前状态： " + i['current_exam_attempt']['status']})
+
+                                        print(response.text)
+            else:
+                pass
+            break
+        except:
+            time.sleep(20)
+            pass
+
+
+    print("[监测成功！]")
+    time.sleep(600)
